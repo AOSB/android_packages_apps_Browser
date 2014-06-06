@@ -60,6 +60,7 @@ public class NavScreen extends RelativeLayout
     ImageButton mBookmarks;
     ImageButton mMore;
     ImageButton mHomeTab;
+    ImageButton mNewIncognitoTab;
     ImageButton mNewTab;
     FrameLayout mHolder;
 
@@ -70,8 +71,6 @@ public class NavScreen extends RelativeLayout
     NavTabScroller mScroller;
     TabAdapter mAdapter;
     int mOrientation;
-    Point mSize;
-    boolean mNeedsMenu;
     HashMap<Tab, View> mTabViews;
 
     public NavScreen(Activity activity, UiController ctl, PhoneUi ui) {
@@ -80,9 +79,6 @@ public class NavScreen extends RelativeLayout
         mUiController = ctl;
         mUi = ui;
         mOrientation = activity.getResources().getConfiguration().orientation;
-        WindowManager wm = (WindowManager)getContext().getSystemService(Context.WINDOW_SERVICE);
-        mSize = new Point();
-        wm.getDefaultDisplay().getSize(mSize);
         init();
     }
 
@@ -127,10 +123,12 @@ public class NavScreen extends RelativeLayout
                 R.string.accessibility_transition_navscreen));
         mBookmarks = (ImageButton) findViewById(R.id.bookmarks);
         mHomeTab = (ImageButton) findViewById(R.id.gotohome);
+        mNewIncognitoTab = (ImageButton) findViewById(R.id.newincognitotab);
         mNewTab = (ImageButton) findViewById(R.id.newtab);
         mMore = (ImageButton) findViewById(R.id.more);
         mBookmarks.setOnClickListener(this);
         mHomeTab.setOnClickListener(this);
+        mNewIncognitoTab.setOnClickListener(this);
         mNewTab.setOnClickListener(this);
         mMore.setOnClickListener(this);
         mScroller = (NavTabScroller) findViewById(R.id.scroller);
@@ -148,18 +146,14 @@ public class NavScreen extends RelativeLayout
                 onCloseTab(tab);
             }
         });
-        mNeedsMenu = !ViewConfiguration.get(getContext()).hasPermanentMenuKey();
-        if (!mNeedsMenu) {
-            mMore.setVisibility(View.GONE);
-        }
     }
 
     @Override
     public void onClick(View v) {
         if (mBookmarks == v) {
             mUiController.bookmarksOrHistoryPicker(ComboViews.Bookmarks);
-        } else if (mNewTab == v) {
-            openNewTab(false);
+        } else if (mNewIncognitoTab == v || mNewTab == v) {
+            openNewTab(mNewIncognitoTab == v);
         } else if (mHomeTab == v) {
             gotoHomePage();
         } else if (mMore == v) {
@@ -174,6 +168,7 @@ public class NavScreen extends RelativeLayout
             } else {
                 mUiController.closeTab(tab);
             }
+            mTabViews.remove(tab);
         }
     }
 
@@ -219,9 +214,7 @@ public class NavScreen extends RelativeLayout
     }
 
     private Tab findCenteredTab(){
-        View v = mOrientation == Configuration.ORIENTATION_LANDSCAPE ?
-                mScroller.findViewAt(mSize.y/2, mSize.x/2):
-                mScroller.findViewAt(mSize.x/2, mSize.y/2);
+        View v = mScroller.findViewAt(mScroller.getWidth() / 2, mScroller.getHeight() / 2);
         if( v != null && v instanceof NavTabView ){
             Long tabId = ((NavTabView)v).getWebViewId();
             if( tabId != null ){
@@ -289,6 +282,7 @@ public class NavScreen extends RelativeLayout
                 public void onClick(View v) {
                     if (tabview.isClose(v)) {
                         mScroller.animateOut(tabview);
+                        mTabViews.remove(tab);
                     } else if (tabview.isTitle(v)) {
                         switchToTab(tab);
                         mUi.getTitleBar().setSkipTitleBarAnimations(true);
